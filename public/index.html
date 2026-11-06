@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xer Store — shop from local resellers</title>
+  <meta name="description" content="Shop Shein and Amazon products from local stores. Buy what is available now, or order what you want.">
+  <meta name="theme-color" content="#1b1726">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="#/" class="brand">Xer<span>Store</span></a>
+      <form class="search" id="searchForm" role="search">
+        <input id="searchInput" type="search" placeholder="Search products or stores…" aria-label="Search">
+      </form>
+      <nav class="nav">
+        <a href="#/track" class="hide-sm">Track order</a>
+        <a href="#/sell" class="sell-btn" id="sellLink">Sell</a>
+        <a href="#/cart" class="cart-link" aria-label="Cart">🛒<span class="cart-count" id="cartCount"></span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app"><div class="loading">Loading…</div></main>
+
+  <footer class="footer">
+    <div><b>Xer Store</b> — products from Shein, Amazon and more, sold by local stores.</div>
+    <div class="small" style="margin-top:6px">
+      <a href="#/track">Track an order</a> · <a href="#/sell">Open your store</a>
+    </div>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

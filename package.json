@@ -1,0 +1,18 @@
+{
+  "name": "xer-store",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-store marketplace for resellers of Shein, Amazon and other imported products. Each seller opens a store, lists products by category, and marks them as available now (on hand) or by order.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
