@@ -1,24 +1,33 @@
 // End-to-end API tests. Run with: npm test
-const { test, before, after } = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createApp } from '../src/app.js';
+import { openNodeDb } from '../src/db-node.js';
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'xer-store-test-'));
-process.env.DATA_DIR = dataDir;
-process.env.SEED_DEMO = 'false';
-const app = require('../server');
+// Set TEST_BASE_URL (e.g. http://127.0.0.1:8787 from `npm run cf:dev` on a fresh
+// database) to run the same tests against the Cloudflare Workers version.
+const REMOTE = process.env.TEST_BASE_URL;
+const dataDir = REMOTE ? null : fs.mkdtempSync(path.join(os.tmpdir(), 'xer-store-test-'));
+const db = REMOTE ? null : openNodeDb(dataDir);
+const app = REMOTE ? null : createApp({ db });
 
 let server;
 let base;
 
 before(async () => {
+  if (REMOTE) {
+    base = REMOTE;
+    return;
+  }
   server = app.listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
 after(() => {
+  if (REMOTE) return;
   server.close();
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
@@ -135,4 +144,35 @@ test('validation and auth', async () => {
     title: 'X', category_id: 'other', price: 1, availability: 'in_stock', image: 'javascript:alert(1)',
   }, login.body.token);
   assert.equal(badImg.status, 400);
+});
+
+test('photo upload is stored in the database and served back', async () => {
+  const login = await call('POST', '/api/auth/login', { email: 'a@test.com', password: 'secret123' });
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const up = await call('POST', '/api/uploads', { data: `data:image/png;base64,${png}` }, login.body.token);
+  assert.equal(up.status, 201);
+  assert.match(up.body.url, /^\/images\/[a-f0-9]+\.png$/);
+  const res = await fetch(base + up.body.url);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/png');
+  assert.equal(Buffer.from(await res.arrayBuffer()).toString('base64'), png);
+  assert.equal((await call('POST', '/api/uploads', { data: 'data:text/html;base64,AAAA' }, login.body.token)).status, 400);
+  assert.equal((await call('POST', '/api/uploads', { data: `data:image/png;base64,${png}` })).status, 401);
+});
+
+test('two buyers racing for the last item: only one order succeeds', async () => {
+  const login = await call('POST', '/api/auth/login', { email: 'b@test.com', password: 'secret123' });
+  const p = await call('POST', '/api/my/products', {
+    title: 'Last one', category_id: 'toys', price: 5, availability: 'in_stock', quantity: 1,
+  }, login.body.token);
+  const order = () => call('POST', '/api/orders', {
+    customer_name: 'C', phone: '0911000001', address: 'X', items: [{ product_id: p.body.id, qty: 1 }],
+  });
+  const results = await Promise.all([order(), order(), order()]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [201, 409, 409]);
+  assert.equal((await call('GET', `/api/products/${p.body.id}`)).body.quantity, 0);
+});
+
+test('stock can never go negative, even with a direct update', { skip: !!REMOTE }, async () => {
+  await assert.rejects(db.run('UPDATE products SET quantity = -1 WHERE id = 1'), /OUT_OF_STOCK/);
 });

@@ -267,6 +267,7 @@ input[type=color] { width: 56px; height: 40px; border: 1px solid var(--line); bo
 .upload { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .upload .preview { width: 96px; height: 96px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; color: var(--muted); font-size: .75rem; }
 .upload .preview img { width: 100%; height: 100%; object-fit: cover; }
+.upload input[type=file] { width: 100%; max-width: 100%; font-size: .85rem; }
 
 .qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
 .qty button { width: 36px; height: 36px; border: 0; background: none; cursor: pointer; font-size: 1.1rem; }
@@ -327,6 +328,7 @@ input[type=color] { width: 56px; height: 40px; border: 1px solid var(--line); bo
 
 /* ---------- dashboard ---------- */
 .dash { display: grid; gap: 18px; grid-template-columns: 1fr; }
+.dash > * { min-width: 0; }
 @media (min-width: 900px) { .dash { grid-template-columns: 220px 1fr; align-items: start; } }
 .side { display: flex; gap: 6px; overflow-x: auto; }
 @media (min-width: 900px) { .side { flex-direction: column; position: sticky; top: 80px; } }

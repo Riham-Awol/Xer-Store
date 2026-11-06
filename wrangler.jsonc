@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "xer-store",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The website files. Requests for /api, /images and /healthz go to worker.js.
+  "assets": {
+    "directory": "./public",
+    "run_worker_first": ["/api/*", "/images/*", "/healthz"]
+  },
+
+  // The database. Cloudflare creates it automatically on the first deploy,
+  // and the app creates its tables on the first request.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "xer-store",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "vars": {
+    "CURRENCY": "ETB",
+    "SITE_NAME": "Xer Store"
+  },
+
+  "observability": { "enabled": true }
+}
