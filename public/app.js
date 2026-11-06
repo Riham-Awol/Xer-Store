@@ -78,7 +78,13 @@
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (state.token) headers.Authorization = `Bearer ${state.token}`;
     const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => null);
+    if (data === null) {
+      // Not JSON: the server part of the site isn't running or isn't reachable.
+      const err = new Error(`Can't reach the store server (error ${res.status}). Please try again in a minute.`);
+      err.status = res.status;
+      throw err;
+    }
     if (!res.ok) {
       if (res.status === 401 && state.token && path !== '/api/auth/login') {
         setSession(null);
