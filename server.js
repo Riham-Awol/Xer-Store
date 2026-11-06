@@ -21,6 +21,9 @@ if (process.env.SEED_DEMO !== 'false') seedDemo();
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.use(express.json({ limit: '6mb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '30d' }));
 app.use(express.static(path.join(__dirname, 'public')));

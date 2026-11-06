@@ -42,6 +42,55 @@ Example:
 CURRENCY=ETB SEED_DEMO=false npm start
 ```
 
+## Hosting (putting it online)
+
+The app keeps its database and uploaded photos in one folder (`DATA_DIR`). **The host must give you a persistent disk/volume for that folder.** Without one, all stores, products and orders are erased whenever the app restarts or redeploys. Free plans without a disk are only good for a quick demo.
+
+The repo includes a `Dockerfile` that stores data in `/data`. Any host that runs Docker can use it.
+
+### Option A: Railway (easiest)
+
+1. Merge this code into the `main` branch on GitHub.
+2. Go to railway.com and sign in with GitHub.
+3. **New Project → Deploy from GitHub repo** and pick `xer-store`. Railway finds the `Dockerfile` and builds it.
+4. In the service, **add a Volume** with mount path `/data`.
+5. Under **Variables**, add:
+   - `CURRENCY` = `ETB` (or your currency)
+   - `SEED_DEMO` = `false` (start without demo stores)
+6. Under **Settings → Networking**, click **Generate Domain**. You get a public `https://….up.railway.app` link.
+7. Optional: add your own domain (e.g. `xerstore.com`) in the same Networking section, then add the DNS record it shows you at your domain registrar.
+
+### Option B: Render
+
+1. Merge the code into `main`.
+2. On render.com: **New → Web Service** → connect the GitHub repo. Render detects the `Dockerfile`.
+3. Choose a **paid instance** (the free one has no disk and sleeps when idle).
+4. Under **Disks**, add a disk with mount path `/data` (1 GB is plenty to start).
+5. Add environment variables `CURRENCY` and `SEED_DEMO=false`.
+6. Set the health check path to `/healthz` and deploy. Render gives you an `https://….onrender.com` link.
+
+### Option C: Your own VPS (DigitalOcean, Hetzner, etc.)
+
+```bash
+git clone https://github.com/riham-awol/xer-store.git && cd xer-store
+```
+
+```bash
+docker build -t xer-store .
+```
+
+```bash
+docker run -d --name xer-store --restart unless-stopped -p 80:3000 -v xer-data:/data -e CURRENCY=ETB -e SEED_DEMO=false xer-store
+```
+
+For HTTPS on a VPS, put a reverse proxy such as Caddy in front of it.
+
+### After it's live
+
+- **Don't launch with the demo data.** The demo seller accounts use a public password (`demo1234`). Start with `SEED_DEMO=false`. If you already started with demo data, use a fresh volume.
+- **Back up** the `/data` folder regularly. It holds everything: `xer-store.db` plus the `uploads/` photos.
+- Updating is automatic on Railway and Render: push to `main` and they redeploy. Your data on the volume stays.
+
 ## Tests
 
 ```bash
