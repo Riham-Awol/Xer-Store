@@ -680,7 +680,7 @@
           <div class="preview" id="${name}Preview">${value ? `<img src="${esc(value)}" alt="">` : 'No image'}</div>
           <div class="stack" style="flex:1;min-width:200px">
             <input type="file" accept="image/*" id="${name}File">
-            <input type="url" name="${name}" id="${name}Url" value="${esc(value)}" placeholder="…or paste an image link (https://…)">
+            <input type="text" inputmode="url" name="${name}" id="${name}Url" value="${esc(value)}" placeholder="…or paste an image link (https://…)">
           </div>
         </div>
       </div>`;

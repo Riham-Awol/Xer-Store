@@ -10,9 +10,40 @@ A multi-store marketplace for resellers who bring products from **Shein**, **Ama
 - **Cart and checkout** work across stores. A cart with items from 2 stores becomes 2 orders, one per store. Payment is on delivery or arranged with the store.
 - **Order tracking**: customers track an order with its code and phone number. Sellers update the status (New → Confirmed → Ordered from supplier → Arrived → Out for delivery → Delivered, or Cancelled). Cancelling puts in-stock items back in stock.
 
-## Run it
+## Put it online for free (Cloudflare)
 
-Requires **Node.js 22.13 or newer** (uses the built-in SQLite).
+The app runs on **Cloudflare Workers** (free plan) with a **Cloudflare D1** database. Products, orders and photos are all stored in D1, so nothing is lost on restarts. The site never sleeps.
+
+1. Sign up for free at **dash.cloudflare.com**.
+2. In the left menu, open **Workers & Pages** (under "Compute"), then click **Create application**.
+3. Choose **Import a repository** (Continue with GitHub). Let Cloudflare access the **Xer-Store** repository, then select it.
+4. Check the settings:
+   - Project name: `xer-store`
+   - Build command: leave empty
+   - Deploy command: `npx wrangler deploy`
+   - Branch: `main`
+5. Click **Create and deploy**. The first deploy creates the database automatically. The app creates its tables the first time someone opens the site.
+6. When it finishes, Cloudflare shows your link, something like `https://xer-store.<your-name>.workers.dev`. Open it, click **Sell** and create the first store.
+
+After that, every change merged into `main` goes live automatically. Your data stays.
+
+**Currency and site name** are set in `wrangler.jsonc` under `"vars"` (currently `ETB`). Change them there, not in the Cloudflare dashboard, because each deploy resets dashboard values to what's in the file.
+
+**Own domain (optional):** in the worker's **Settings → Domains & Routes**, add a custom domain (e.g. `xerstore.com`). The domain must be added to your Cloudflare account first.
+
+**If the first deploy fails with a D1/database error:** open **Storage & Databases → D1**, create a database named `xer-store`, copy its **Database ID**, and add `"database_id": "<that id>"` next to `"database_name"` in `wrangler.jsonc`. Then deploy again.
+
+**Free plan limits** (as of late 2026): 100,000 requests a day, 5 GB of database storage, 5 million rows read and 100,000 rows written per day. That's plenty for a growing store. Each page view makes roughly 3–6 requests.
+
+**Backups:** in the dashboard under **D1 → xer-store**, use Time Travel to restore to an earlier point. Or download a copy with:
+
+```bash
+npx wrangler d1 export xer-store --remote --output backup.sql
+```
+
+## Run it on your computer
+
+Requires **Node.js 22.13 or newer**.
 
 ```bash
 npm install
@@ -22,58 +53,30 @@ npm install
 npm start
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. On the first run the app adds 3 demo stores with products. To log in as a demo seller, use `demo@xer.store` / `demo1234`. Other demo sellers are `yonas@xer.store` and `hana@xer.store`, with the same password.
 
-On the first run the app adds 3 demo stores with products. To log in as a demo seller, use `demo@xer.store` / `demo1234`. Other demo sellers are `yonas@xer.store` and `hana@xer.store`, with the same password.
+To run the Cloudflare version locally, with a local copy of the D1 database:
 
-## Settings (environment variables)
+```bash
+npm run cf:dev
+```
+
+### Settings for `npm start` (environment variables)
 
 | Variable    | Default    | What it does                                        |
 |-------------|------------|-----------------------------------------------------|
 | `PORT`      | `3000`     | Port to listen on                                   |
 | `CURRENCY`  | `$`        | Currency shown on prices, e.g. `ETB` or `Br`        |
-| `SITE_NAME` | `Xer Store`| Name used in the API config                         |
-| `DATA_DIR`  | `./data`   | Where the database and uploaded images are stored   |
+| `SITE_NAME` | `Xer Store`| Shop name                                           |
+| `DATA_DIR`  | `./data`   | Where the database is stored                        |
 | `SEED_DEMO` | `true`     | Set to `false` to start with an empty marketplace   |
 
-Example:
+## Other ways to host
 
-```bash
-CURRENCY=ETB SEED_DEMO=false npm start
-```
+The same code also runs as a normal Node.js server, so any host with a **persistent disk** works. The included `Dockerfile` stores data in `/data`, so mount a volume there.
 
-## Hosting (putting it online)
-
-The app keeps its database and uploaded photos in one folder (`DATA_DIR`). **The host must give you a persistent disk/volume for that folder.** Without one, all stores, products and orders are erased whenever the app restarts or redeploys. Free plans without a disk are only good for a quick demo.
-
-The repo includes a `Dockerfile` that stores data in `/data`. Any host that runs Docker can use it.
-
-### Option A: Railway (easiest)
-
-1. Merge this code into the `main` branch on GitHub.
-2. Go to railway.com and sign in with GitHub.
-3. **New Project → Deploy from GitHub repo** and pick `xer-store`. Railway finds the `Dockerfile` and builds it.
-4. In the service, **add a Volume** with mount path `/data`.
-5. Under **Variables**, add:
-   - `CURRENCY` = `ETB` (or your currency)
-   - `SEED_DEMO` = `false` (start without demo stores)
-6. Under **Settings → Networking**, click **Generate Domain**. You get a public `https://….up.railway.app` link.
-7. Optional: add your own domain (e.g. `xerstore.com`) in the same Networking section, then add the DNS record it shows you at your domain registrar.
-
-### Option B: Render
-
-1. Merge the code into `main`.
-2. On render.com: **New → Web Service** → connect the GitHub repo. Render detects the `Dockerfile`.
-3. Choose a **paid instance** (the free one has no disk and sleeps when idle).
-4. Under **Disks**, add a disk with mount path `/data` (1 GB is plenty to start).
-5. Add environment variables `CURRENCY` and `SEED_DEMO=false`.
-6. Set the health check path to `/healthz` and deploy. Render gives you an `https://….onrender.com` link.
-
-### Option C: Your own VPS (DigitalOcean, Hetzner, etc.)
-
-```bash
-git clone https://github.com/riham-awol/xer-store.git && cd xer-store
-```
+- **Railway / Render (paid plans):** connect the GitHub repo, add a volume/disk at `/data`, and set `CURRENCY` and `SEED_DEMO=false`.
+- **Your own server:**
 
 ```bash
 docker build -t xer-store .
@@ -83,13 +86,7 @@ docker build -t xer-store .
 docker run -d --name xer-store --restart unless-stopped -p 80:3000 -v xer-data:/data -e CURRENCY=ETB -e SEED_DEMO=false xer-store
 ```
 
-For HTTPS on a VPS, put a reverse proxy such as Caddy in front of it.
-
-### After it's live
-
-- **Don't launch with the demo data.** The demo seller accounts use a public password (`demo1234`). Start with `SEED_DEMO=false`. If you already started with demo data, use a fresh volume.
-- **Back up** the `/data` folder regularly. It holds everything: `xer-store.db` plus the `uploads/` photos.
-- Updating is automatic on Railway and Render: push to `main` and they redeploy. Your data on the volume stays.
+Don't launch a public site with the demo data. The demo accounts use a public password.
 
 ## Tests
 
@@ -97,12 +94,24 @@ For HTTPS on a VPS, put a reverse proxy such as Caddy in front of it.
 npm test
 ```
 
+To run the same tests against the Cloudflare version, start `npm run cf:dev` on a fresh local database. Then, in a second terminal:
+
+```bash
+TEST_BASE_URL=http://127.0.0.1:8787 npm test
+```
+
 ## Project layout
 
 ```
-server.js        Express API and static file server
-db.js            SQLite schema, categories, demo data, password helpers
-public/          Frontend (no build step): index.html, app.js, styles.css
-test/            API tests (node:test)
-data/            Created at runtime: database + uploaded images (git-ignored)
+src/app.js              The marketplace API (shared by both runtimes)
+src/db-d1.js            Database adapter for Cloudflare D1
+src/db-node.js          Database adapter for Node.js SQLite + demo data
+src/schema.js           Creates the tables on first run
+src/passwords.js        Password hashing (Web Crypto PBKDF2)
+migrations/0001_init.sql  Database schema
+worker.js               Cloudflare Workers entry point
+server.js               Node.js entry point
+wrangler.jsonc          Cloudflare settings
+public/                 Frontend (no build step): index.html, app.js, styles.css
+test/                   API tests (node:test)
 ```
